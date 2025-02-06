@@ -1,9 +1,10 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Home, Building, Calendar, Bell, ChevronDown, User, Menu, X } from 'lucide-react'
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { Home, Building, Calendar, Bell, ChevronDown, User, Menu, X, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,12 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { supabase } from "@/lib/supabase"
 
 const menuItems = [
-  { icon: Home, label: 'Dashboard', href: '/dashboard' },
-  { icon: Building, label: 'Facilities', href: '/dashboard/facilities' },
-  { icon: Calendar, label: 'Reservation', href: '/dashboard/reservation' },
-  { icon: Bell, label: 'Notification', href: '/dashboard/notification' },
+  { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
+  { icon: Building, label: "Facilities", href: "/admin/dashboard/facilities" },
+  { icon: Calendar, label: "Reservation", href: "/admin/dashboard/reservation" },
+  { icon: Bell, label: "Notification", href: "/admin/dashboard/notification" },
 ]
 
 export default function DashboardLayout({
@@ -28,15 +30,48 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [adminName, setAdminName] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
     checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data, error } = await supabase.from("users").select("first_name, last_name").eq("id", user.id).single()
+
+        if (error) {
+          console.error("Error fetching admin data:", error)
+        } else if (data) {
+          setAdminName(`${data.first_name} ${data.last_name}`)
+        }
+      } else {
+        // If no user is found, redirect to home page
+        router.push("/")
+      }
+    }
+
+    fetchAdminData()
+  }, [router])
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error("Error signing out:", error)
+    } else {
+      router.push("/")
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -45,25 +80,20 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center py-2 md:py-4">
             <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="mr-2"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="mr-2">
                 {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
               <Link href="/" className="flex items-center">
-                <Image 
-                  src="/libmanan-logo.png" 
-                  alt="Bayan ng Libmanan Logo" 
+                <Image
+                  src="/libmanan-logo.png"
+                  alt="Bayan ng Libmanan Logo"
                   width={40}
                   height={40}
                   className="object-contain"
                   priority
                 />
                 <span className="ml-2 text-base md:text-xl font-semibold text-gray-800 line-clamp-1">
-                  {isMobile ? 'LIBMANAN' : 'LOCAL GOVERNMENT OF LIBMANAN'}
+                  {isMobile ? "LIBMANAN" : "LOCAL GOVERNMENT OF LIBMANAN"}
                 </span>
               </Link>
             </div>
@@ -71,16 +101,21 @@ export default function DashboardLayout({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <User className="h-5 w-5" />
-                  <span className="hidden md:inline">John Doe</span>
+                  <span className="hidden md:inline">{adminName || "Admin"}</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -91,7 +126,7 @@ export default function DashboardLayout({
         {/* Sidebar */}
         <aside
           className={`fixed left-0 top-[57px] md:top-[73px] h-[calc(100vh-57px)] md:h-[calc(100vh-73px)] bg-white shadow-md transition-all duration-300 ease-in-out z-40 ${
-            isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'
+            isSidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
           }`}
         >
           <nav className="flex flex-col space-y-1 p-4 h-full overflow-y-auto">
@@ -111,19 +146,12 @@ export default function DashboardLayout({
 
         {/* Overlay for mobile */}
         {isSidebarOpen && isMobile && (
-          <div
-            className="fixed inset-0 bg-black/20 z-30"
-            onClick={() => setIsSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/20 z-30" onClick={() => setIsSidebarOpen(false)} />
         )}
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'md:ml-64' : 'ml-0'
-        }`}>
-          <div className="container mx-auto px-4 py-8">
-            {children}
-          </div>
+        <main className={`flex-1 transition-all duration-300 ease-in-out ${isSidebarOpen ? "md:ml-64" : "ml-0"}`}>
+          <div className="container mx-auto px-4 py-8">{children}</div>
         </main>
       </div>
     </div>

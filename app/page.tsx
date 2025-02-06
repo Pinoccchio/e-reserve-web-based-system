@@ -1,7 +1,12 @@
-import Link from 'next/link'
-import { Calendar, MapPin, Clock, Users } from 'lucide-react'
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Calendar, MapPin, Clock, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { supabase } from "@/lib/supabase"
 
 const featuredVenues = [
   { id: 1, name: "Grand Ballroom", capacity: 500, location: "City Center" },
@@ -10,6 +15,34 @@ const featuredVenues = [
 ]
 
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) {
+        // User is logged in, fetch their account type
+        const { data, error } = await supabase.from("users").select("account_type").eq("id", session.user.id).single()
+
+        if (error) {
+          console.error("Error fetching user data:", error)
+          return
+        }
+
+        // Redirect based on account type
+        if (data.account_type === "admin") {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/dashboard")
+        }
+      }
+    }
+
+    checkSession()
+  }, [router])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -18,8 +51,8 @@ export default function Home() {
             Find Your Perfect Venue
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover and reserve the ideal space for your next event with E-Reserve. 
-            From intimate gatherings to grand celebrations, we've got you covered.
+            Discover and reserve the ideal space for your next event with E-Reserve. From intimate gatherings to grand
+            celebrations, we've got you covered.
           </p>
           <div className="mt-8">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -32,8 +65,8 @@ export default function Home() {
           {featuredVenues.map((venue) => (
             <Card key={venue.id} className="overflow-hidden transition-all duration-300 hover:shadow-lg">
               <CardHeader className="p-0">
-                <img 
-                  src={`https://source.unsplash.com/random/400x200?venue=${venue.id}`} 
+                <img
+                  src={`https://source.unsplash.com/random/400x200?venue=${venue.id}`}
                   alt={venue.name}
                   className="w-full h-48 object-cover"
                 />

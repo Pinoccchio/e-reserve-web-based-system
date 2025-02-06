@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { CalendarIcon, Clock, MapPin, ArrowRight } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import DashboardCalendar from '../components/DashboardCalendar'
+import DashboardCalendar from '../../components/DashboardCalendar'
 
 export default function DashboardPage() {
   return (

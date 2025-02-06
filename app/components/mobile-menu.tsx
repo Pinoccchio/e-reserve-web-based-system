@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Menu } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { AuthDialogs } from './auth-dialogs'
+import { AuthDialogs } from './AuthDialog'
 
 export function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false)
