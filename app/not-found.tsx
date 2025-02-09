@@ -12,8 +12,14 @@ export default function NotFound() {
   const handleSignOutAndReturn = async () => {
     setIsLoading(true)
     try {
+      // Sign out the user
       await supabase.auth.signOut()
-      router.push("/")
+
+      // Use replace to avoid history stack issues
+      router.replace("/")
+
+      // Force a hard refresh to clear any cached state
+      window.location.reload()
     } catch (error) {
       console.error("Error signing out:", error)
     } finally {

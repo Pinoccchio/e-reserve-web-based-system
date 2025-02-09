@@ -2,10 +2,12 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { AuthDialogs } from "./AuthDialog"
 import { MobileMenu } from "./mobile-menu"
-import type React from "react" // Import React
+import type React from "react"
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
 
 export function RootLayoutClient({
   children,
@@ -13,9 +15,33 @@ export function RootLayoutClient({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      setIsAuthenticated(!!session)
+
+      if (session) {
+        const { data } = await supabase.from("users").select("account_type").eq("id", session.user.id).single()
+
+        if (data?.account_type === "admin") {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/dashboard")
+        }
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
   const isAdminDashboard = pathname?.startsWith("/admin/dashboard")
   const isDashboard = pathname?.startsWith("/dashboard")
-  const shouldShowHeader = !isAdminDashboard && !isDashboard
+  const shouldShowHeader = !isAdminDashboard && !isDashboard && !isAuthenticated
 
   return (
     <>
