@@ -5,6 +5,9 @@ import { useState, useEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { X } from "lucide-react"
 
+// Remove or comment out the import for ToastActionElement if it's not needed
+// import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
 interface ToastProps {
   message: string
   type?: "success" | "error" | "info" | "warning"
@@ -83,4 +86,3 @@ export const showToast = (message: string, type?: "success" | "error" | "info" |
     window.addEventListener("DOMContentLoaded", createToast)
   }
 }
-
