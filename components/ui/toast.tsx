@@ -1,14 +1,15 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { useState, useEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { X } from "lucide-react"
+import * as ToastPrimitives from "@radix-ui/react-toast"
+import { cn } from "@/lib/utils"
 
-// Remove or comment out the import for ToastActionElement if it's not needed
-// import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+export type ToastActionElement = React.ReactElement<React.ComponentProps<typeof ToastAction>>
 
-interface ToastProps {
+export interface ToastProps {
   message: string
   type?: "success" | "error" | "info" | "warning"
   duration?: number
@@ -86,3 +87,19 @@ export const showToast = (message: string, type?: "success" | "error" | "info" |
     window.addEventListener("DOMContentLoaded", createToast)
   }
 }
+
+export const ToastAction = React.forwardRef<
+  React.ElementRef<typeof ToastPrimitives.Action>,
+  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
+>(({ className, ...props }, ref) => (
+  <ToastPrimitives.Action
+    ref={ref}
+    className={cn(
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-destructive/30 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+      className,
+    )}
+    {...props}
+  />
+))
+ToastAction.displayName = ToastPrimitives.Action.displayName
+
