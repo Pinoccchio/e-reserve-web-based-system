@@ -5,7 +5,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { AuthDialogs } from "./AuthDialog"
 import { MobileMenu } from "./mobile-menu"
-import type React from "react" // Added import for React
+import type React from "react" // Import React
 
 export function RootLayoutClient({
   children,
@@ -124,7 +124,7 @@ export function RootLayoutClient({
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-300">
-              © 2025 E-Reserve. All rights reserved.
+              © {new Date().getFullYear()} E-Reserve. All rights reserved.
             </div>
           </div>
         </footer>
