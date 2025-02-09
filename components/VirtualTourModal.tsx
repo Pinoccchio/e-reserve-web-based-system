@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 
 interface Hotspot {
   x: number
@@ -28,16 +28,6 @@ export function VirtualTourModal({ isOpen, onClose, facilityName, images }: Virt
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -218,4 +208,3 @@ export function VirtualTourModal({ isOpen, onClose, facilityName, images }: Virt
     </Dialog>
   )
 }
-

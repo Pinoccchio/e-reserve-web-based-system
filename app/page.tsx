@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Calendar, MapPin, Clock, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 
 const featuredVenues = [
@@ -52,7 +52,7 @@ export default function Home() {
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Discover and reserve the ideal space for your next event with E-Reserve. From intimate gatherings to grand
-            celebrations, we've got you covered.
+            celebrations, we&apos;ve got you covered.
           </p>
           <div className="mt-8">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
