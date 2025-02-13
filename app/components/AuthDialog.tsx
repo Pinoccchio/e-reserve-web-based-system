@@ -1,16 +1,8 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,28 +11,46 @@ import { supabase } from "@/lib/supabase"
 import { showToast } from "@/components/ui/toast"
 import { Eye, EyeOff } from "lucide-react"
 
-export function AuthDialogs() {
-  const [isSignInOpen, setIsSignInOpen] = useState(false)
+interface AuthDialogsProps {
+  children: React.ReactNode
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function AuthDialogs({ children, isOpen, onOpenChange }: AuthDialogsProps) {
+  const [isSignInOpen, setIsSignInOpen] = useState(isOpen || false)
   const [isSignUpOpen, setIsSignUpOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSignInPassword, setShowSignInPassword] = useState(false)
   const [showSignUpPassword, setShowSignUpPassword] = useState(false)
   const router = useRouter()
 
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setIsSignInOpen(isOpen)
+    }
+  }, [isOpen])
+
+  const openSignInDialog = () => {
+    setIsSignInOpen(true)
+  }
+
+  const openSignUpDialog = () => {
+    setIsSignUpOpen(true)
+  }
+
   const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
 
     const formData = new FormData(event.currentTarget)
+    const accountType = formData.get("accountType") as string
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
-    const accountType = formData.get("accountType") as string
 
     try {
-      console.log("Attempting to sign up with:", { email, firstName, lastName, accountType })
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -57,23 +67,15 @@ export function AuthDialogs() {
         throw error
       }
 
-      console.log("Sign up successful, user data:", data)
-
-      if (!data.user) {
-        throw new Error("User data is missing after sign up")
-      }
-
-      showToast("Account created successfully. You can now log in with your account.", "success")
+      showToast("Account created successfully. Welcome!", "success")
       setIsSignUpOpen(false)
-    } catch (error) {
-      console.error("Error during sign up:", error)
-      let errorMessage = "There was a problem creating your account."
-
-      if (error instanceof Error) {
-        errorMessage += " " + error.message
+      if (accountType === "admin") {
+        router.push("/admin/dashboard")
+      } else {
+        router.push("/end-user/dashboard")
       }
-
-      showToast(errorMessage, "error")
+    } catch (error) {
+      showToast("There was a problem creating your account. Please try again.", "error")
     } finally {
       setIsLoading(false)
     }
@@ -95,25 +97,9 @@ export function AuthDialogs() {
 
       if (error) throw error
 
-      // Fetch user account type from the users table
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_type")
-        .eq("id", data.user.id)
-        .single()
-
-      if (userError) throw userError
-
       setIsSignInOpen(false)
 
-      // Redirect based on user account type
-      if (userData.account_type === "admin") {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/dashboard")
-      }
-
-      showToast(`Welcome back, ${data.user.user_metadata.first_name}!`, "success")
+      showToast(`Welcome, ${data.user.user_metadata.first_name}!`, "success")
     } catch (error) {
       console.error("Error during sign in:", error)
       showToast("Invalid email or password.", "error")
@@ -122,12 +108,31 @@ export function AuthDialogs() {
     }
   }
 
+  const updateIsSignInOpen = (open: boolean) => {
+    setIsSignInOpen(open)
+    onOpenChange?.(open)
+  }
+
   return (
-    <div className="flex flex-row items-center justify-center space-x-4">
-      <Dialog open={isSignInOpen} onOpenChange={setIsSignInOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Sign In</Button>
-        </DialogTrigger>
+    <>
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement<React.HTMLAttributes<HTMLElement>>(child) && typeof child.type !== "string") {
+          return React.cloneElement(child, {
+            onClick: (e: React.MouseEvent<HTMLElement>) => {
+              if (child.props.onClick) {
+                child.props.onClick(e)
+              }
+              if (child.props.children === "Sign In") {
+                updateIsSignInOpen(true)
+              } else if (child.props.children === "Sign Up") {
+                openSignUpDialog()
+              }
+            },
+          })
+        }
+        return child
+      })}
+      <Dialog open={isSignInOpen} onOpenChange={updateIsSignInOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Sign In</DialogTitle>
@@ -171,9 +176,6 @@ export function AuthDialogs() {
       </Dialog>
 
       <Dialog open={isSignUpOpen} onOpenChange={setIsSignUpOpen}>
-        <DialogTrigger asChild>
-          <Button>Sign Up</Button>
-        </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create an Account</DialogTitle>
@@ -235,7 +237,7 @@ export function AuthDialogs() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
 

@@ -8,6 +8,7 @@ import { MobileMenu } from "./mobile-menu"
 import type React from "react"
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { Button } from "@/components/ui/button"
 
 export function RootLayoutClient({
   children,
@@ -19,29 +20,50 @@ export function RootLayoutClient({
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session)
-
-      if (session) {
-        const { data } = await supabase.from("users").select("account_type").eq("id", session.user.id).single()
-
-        if (data?.account_type === "admin") {
-          router.push("/admin/dashboard")
-        } else {
-          router.push("/dashboard")
+      if (event === "SIGNED_IN") {
+        if (session?.user) {
+          checkUserType(session.user.id)
         }
+      } else if (event === "SIGNED_OUT") {
+        router.push("/")
       }
-    }
+    })
 
     checkAuth()
+
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
   }, [router])
 
+  const checkAuth = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    setIsAuthenticated(!!session)
+    if (session?.user) {
+      checkUserType(session.user.id)
+    }
+  }
+
+  const checkUserType = async (userId: string) => {
+    const { data } = await supabase.from("users").select("account_type").eq("id", userId).single()
+    if (data?.account_type === "admin") {
+      router.push("/admin/dashboard")
+    } else if (data?.account_type === "end-user") {
+      router.push("/end-user/dashboard")
+    }
+  }
+
   const isAdminDashboard = pathname?.startsWith("/admin/dashboard")
-  const isDashboard = pathname?.startsWith("/dashboard")
-  const shouldShowHeader = !isAdminDashboard && !isDashboard && !isAuthenticated
+  const isEndUserDashboard = pathname?.startsWith("/end-user/dashboard")
+  const shouldShowHeader = !isAdminDashboard && !isEndUserDashboard
+
+  if (isAuthenticated && (isAdminDashboard || isEndUserDashboard)) {
+    return children
+  }
 
   return (
     <>
@@ -92,7 +114,12 @@ export function RootLayoutClient({
                 </Link>
               </nav>
               <div className="hidden md:flex items-center space-x-2">
-                <AuthDialogs />
+                <AuthDialogs>
+                  <Button variant="ghost">Sign In</Button>
+                </AuthDialogs>
+                <AuthDialogs>
+                  <Button variant="outline">Sign Up</Button>
+                </AuthDialogs>
               </div>
               <div className="md:hidden">
                 <MobileMenu />
