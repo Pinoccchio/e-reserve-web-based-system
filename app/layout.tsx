@@ -18,6 +18,11 @@ export default function RootLayout({
       <body className={`${inter.className} flex flex-col min-h-screen bg-gray-50`}>
         <RootLayoutClient>{children}</RootLayoutClient>
         <div id="toast-root" />
+        <script
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+          async
+          defer
+        ></script>
       </body>
     </html>
   )

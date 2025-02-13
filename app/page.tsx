@@ -1,47 +1,63 @@
-"use client"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Calendar, MapPin, Clock, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
+import { redirect } from "next/navigation"
 
-const featuredVenues = [
-  { id: 1, name: "Grand Ballroom", capacity: 500, location: "City Center" },
-  { id: 2, name: "Garden Pavilion", capacity: 200, location: "Botanical Gardens" },
-  { id: 3, name: "Conference Hall", capacity: 300, location: "Business District" },
-]
+async function getFeaturedVenues() {
+  const { data: venues, error } = await supabase
+    .from("facilities")
+    .select("id, name, capacity, location, images:facility_images(image_url)")
+    .limit(3)
 
-export default function Home() {
-  const router = useRouter()
+  if (error) {
+    console.error("Error fetching venues:", error)
+    return []
+  }
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
-        // User is logged in, fetch their account type
-        const { data, error } = await supabase.from("users").select("account_type").eq("id", session.user.id).single()
+  return venues
+}
 
-        if (error) {
-          console.error("Error fetching user data:", error)
-          return
-        }
+async function checkUserSession() {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
 
-        // Redirect based on account type
-        if (data.account_type === "admin") {
-          router.push("/admin/dashboard")
-        } else {
-          router.push("/dashboard")
-        }
-      }
+  if (sessionError) {
+    console.error("Error checking session:", sessionError)
+    return null
+  }
+
+  if (session) {
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("account_type")
+      .eq("id", session.user.id)
+      .single()
+
+    if (userError) {
+      console.error("Error fetching user data:", userError)
+      return null
     }
 
-    checkSession()
-  }, [router])
+    return userData.account_type
+  }
+
+  return null
+}
+
+export default async function Home() {
+  const accountType = await checkUserSession()
+
+  if (accountType === "admin") {
+    return redirect("/admin/dashboard")
+  } else if (accountType === "user") {
+    return redirect("/dashboard")
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
@@ -61,37 +77,9 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {featuredVenues.map((venue) => (
-            <Card key={venue.id} className="overflow-hidden transition-all duration-300 hover:shadow-lg">
-              <CardHeader className="p-0">
-                <img
-                  src={`https://source.unsplash.com/random/400x200?venue=${venue.id}`}
-                  alt={venue.name}
-                  className="w-full h-48 object-cover"
-                />
-              </CardHeader>
-              <CardContent className="p-6">
-                <CardTitle className="text-xl mb-2">{venue.name}</CardTitle>
-                <CardDescription className="text-gray-600">
-                  <div className="flex items-center mb-2">
-                    <Users className="w-4 h-4 mr-2" />
-                    Capacity: {venue.capacity}
-                  </div>
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {venue.location}
-                  </div>
-                </CardDescription>
-              </CardContent>
-              <CardFooter>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/venues/${venue.id}`}>View Details</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <Suspense fallback={<div>Loading featured venues...</div>}>
+          <FeaturedVenues />
+        </Suspense>
 
         <div className="bg-white rounded-lg shadow-xl p-8 md:p-12">
           <h2 className="text-3xl font-bold text-center mb-8">Why Choose E-Reserve?</h2>
@@ -120,6 +108,48 @@ export default function Home() {
           </div>
         </div>
       </section>
+    </div>
+  )
+}
+
+async function FeaturedVenues() {
+  const venues = await getFeaturedVenues()
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+      {venues.map((venue) => (
+        <Card key={venue.id} className="overflow-hidden transition-all duration-300 hover:shadow-lg">
+          <CardHeader className="p-0">
+            <div className="relative w-full h-48">
+              <Image
+                src={venue.images[0]?.image_url || "/libmanan-logo.png"}
+                alt={venue.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6">
+            <CardTitle className="text-xl mb-2">{venue.name}</CardTitle>
+            <CardDescription className="text-gray-600">
+              <div className="flex items-center mb-2">
+                <Users className="w-4 h-4 mr-2" />
+                Capacity: {venue.capacity}
+              </div>
+              <div className="flex items-center">
+                <MapPin className="w-4 h-4 mr-2" />
+                {venue.location}
+              </div>
+            </CardDescription>
+          </CardContent>
+          <CardFooter>
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/venues/${venue.id}`}>View Details</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   )
 }
