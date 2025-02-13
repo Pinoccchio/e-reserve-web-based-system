@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { MessageSquare, Send, X, Minimize2, Maximize2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Message {
-  text: string
-  sender: "user" | "bot"
+  role: "user" | "assistant"
+  content: string
 }
 
 export function ChatBot() {
@@ -16,26 +17,64 @@ export function ChatBot() {
   const [isMinimized, setIsMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Initial greeting message
+  useEffect(() => {
+    setMessages([
+      {
+        role: "assistant",
+        content: "Hello! How can I help you today with our venue reservation system?",
+      },
+    ])
+  }, [])
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
-  }, [messagesEndRef]) // Updated dependency
+  }, [messagesEndRef]) //Corrected dependency
 
   const handleSendMessage = async () => {
-    if (input.trim() === "") return
+    if (input.trim() === "" || isLoading) return
 
-    const userMessage: Message = { text: input, sender: "user" }
+    const userMessage: Message = { role: "user", content: input }
     setMessages((prevMessages) => [...prevMessages, userMessage])
     setInput("")
+    setIsLoading(true)
+    setError(null)
 
-    // TODO: Replace this with actual AI-powered chat functionality
-    const botResponse: Message = { text: "Thank you for your message. How can I assist you today?", sender: "bot" }
-    setTimeout(() => {
-      setMessages((prevMessages) => [...prevMessages, botResponse])
-    }, 1000)
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get response")
+      }
+
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.output,
+      }
+
+      setMessages((prevMessages) => [...prevMessages, assistantMessage])
+    } catch (error) {
+      console.error("Error getting chatbot response:", error)
+      setError(error instanceof Error ? error.message : "Failed to get response. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -65,16 +104,21 @@ export function ChatBot() {
               <CardContent>
                 <div className="h-[300px] overflow-y-auto pr-4">
                   {messages.map((message, index) => (
-                    <div key={index} className={`mb-4 ${message.sender === "user" ? "text-right" : "text-left"}`}>
+                    <div key={index} className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}>
                       <span
                         className={`inline-block rounded-lg px-3 py-2 ${
-                          message.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
+                          message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
                         }`}
                       >
-                        {message.text}
+                        {message.content}
                       </span>
                     </div>
                   ))}
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               </CardContent>
@@ -91,8 +135,9 @@ export function ChatBot() {
                     placeholder="Type your message..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    disabled={isLoading}
                   />
-                  <Button type="submit" size="icon">
+                  <Button type="submit" size="icon" disabled={isLoading}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>
